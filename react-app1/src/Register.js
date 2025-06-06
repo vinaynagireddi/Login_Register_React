@@ -1,3 +1,4 @@
+import './App.css';
 import React, { useState } from "react";
 import axios from 'axios';
 
@@ -34,7 +35,7 @@ function Register() {
     }
 
     return(
-        <div>
+        <div className='App'>
             <h2>Register</h2>
             <label htmlFor="userName" >User Name</label>
             <input type="text" id="userName" value={data.userName} onChange={onhandleinput}></input><br/>

@@ -1,3 +1,4 @@
+import './App.css';
 import axios from "axios";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -29,7 +30,7 @@ function Login () {
     
 
     return(
-        <div>
+        <div className='App'>
             <label htmlFor="email">Email</label>
             <input id="email" type="text" value={data.email} onChange={inputHandle}></input><br/>
             <label htmlFor="password">password</label>
