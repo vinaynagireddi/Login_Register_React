@@ -1,4 +1,4 @@
-import './App.css';
+import './Register.css';
 import React, { useState } from "react";
 import axios from 'axios';
 
@@ -35,7 +35,7 @@ function Register() {
     }
 
     return(
-        <div className='App'>
+        <div className='register-box'>
             <h2>Register</h2>
             <label htmlFor="userName" >User Name</label>
             <input type="text" id="userName" value={data.userName} onChange={onhandleinput}></input><br/>
@@ -47,7 +47,7 @@ function Register() {
             <input type="password" id="password" value={data.password} onChange={onhandleinput}></input><br/>
             <button id="submit" onClick={handleSubmit}>submit</button>    
             {message && <p >{message}</p>}
-  
+
         </div>
     );
 }

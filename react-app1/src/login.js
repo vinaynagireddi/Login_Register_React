@@ -1,4 +1,4 @@
-import './App.css';
+import './login.css';
 import axios from "axios";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -30,7 +30,8 @@ function Login () {
     
 
     return(
-        <div className='App'>
+        <div className='login-box'>
+            <h1>Login</h1>
             <label htmlFor="email">Email</label>
             <input id="email" type="text" value={data.email} onChange={inputHandle}></input><br/>
             <label htmlFor="password">password</label>

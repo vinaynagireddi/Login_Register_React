@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import './UserData.css';
 
 function Userdata() {
   const [users, setUsers] =  useState([]);
@@ -15,9 +16,9 @@ function Userdata() {
     }, []);
 
   return (
-    <div>
+    <div className="users-container">
       <h2>All Users</h2>
-      <table border="1">
+      <table className="users-table" border="1">
         <thead>
           <tr>
             <th>User Name</th>
@@ -35,7 +36,7 @@ function Userdata() {
           ))}
         </tbody>
       </table>
-      <button onClick={() => window.open("http://localhost:8000/download-users/")}>Download</button>
+      <button className="download-btn" onClick={() => window.open("http://localhost:8000/download-users/")}>Download</button>
     </div>
   );
 };

@@ -1,0 +1,55 @@
+.users-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  padding: 40px;
+  font-family: Arial, sans-serif;
+  background-color: #f8f9fa;
+}
+
+.users-container h2 {
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.users-table {
+  border-collapse: collapse;
+  width: 80%;
+  max-width: 800px;
+  background-color: white;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.users-table th,
+.users-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.users-table th {
+  background-color: #007bff;
+  color: white;
+}
+
+.users-table tr:nth-child(even) {
+  background-color: #f2f2f2;
+}
+
+.download-btn {
+  margin-top: 20px;
+  padding: 10px 20px;
+  background-color: #28a745;
+  border: none;
+  color: white;
+  font-size: 15px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.download-btn:hover {
+  background-color: #218838;
+}
