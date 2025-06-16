@@ -56,11 +56,28 @@ class LoginView(View):
         except Exception as e:
             return JsonResponse({"message": str(e)}, status=500)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class GetUsersView(View):
+
     def get(self, request):
         try:
             users = list(user_collection.find({}, {'_id': 0, 'userName': 1, 'email': 1, 'phNumber': 1}))
             return JsonResponse(users, safe=False)
+        except Exception as e:
+            return JsonResponse({"message": str(e)}, status=500)
+
+    def put(self, request):
+        try:
+            body = json.loads(request.body)
+            for user in body:
+                user_collection.update_one(
+                    {"email": user["email"]},  # use email as unique identifier
+                    {"$set": {
+                        "userName": user["userName"],
+                        "phNumber": user["phNumber"]
+                    }}
+                )
+            return JsonResponse({"message": "Users updated successfully"})
         except Exception as e:
             return JsonResponse({"message": str(e)}, status=500)
 
