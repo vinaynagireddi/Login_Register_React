@@ -36,7 +36,7 @@ function Login () {
             <input id="email" type="text" value={data.email} onChange={inputHandle}></input><br/>
             <label htmlFor="password">password</label>
             <input id="password" type="password" value={data.password} onChange={inputHandle}></input><br/>
-            <button id="submit" onClick={handleSubmit}>submit</button>
+            <button id="submit" onClick={handleSubmit}>Login</button>
         </div>
     )
 };

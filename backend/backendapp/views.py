@@ -66,7 +66,7 @@ class GetUsersView(View):
         except Exception as e:
             return JsonResponse({"message": str(e)}, status=500)
 
-    def put(self, request):
+    def post(self, request):
         try:
             body = json.loads(request.body)
             for user in body:

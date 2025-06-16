@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import './UserData.css';
@@ -24,7 +25,7 @@ function Userdata() {
   };
 
   const handleSave = () => {
-    axios.put("http://localhost:8000/userdata/", editedUsers)
+    axios.post("http://localhost:8000/userdata/", editedUsers)
       .then(() => {
         alert("User data updated successfully!");
       })
