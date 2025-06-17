@@ -38,7 +38,7 @@
   background-color: #f2f2f2;
 }
 
-.download-btn {
+.save-btn,.download-btn {
   margin-top: 20px;
   padding: 10px 20px;
   background-color: #28a745;
