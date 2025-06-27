@@ -11,8 +11,6 @@ import pdfkit
 client = MongoClient("mongodb://localhost:27017/")
 db = client["offDatabase"]
 user_collection = db["reactcoll"]
-
-
 @method_decorator(csrf_exempt, name="dispatch")
 class RegisterView(View):
     def post(self, request):
