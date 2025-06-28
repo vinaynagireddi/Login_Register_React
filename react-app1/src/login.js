@@ -9,12 +9,15 @@ function Login () {
     });
     const navigate = useNavigate();
 
+    const [message, setMessage] = useState('');
+
     const inputHandle=(e)=>{
         setData({...data,[e.target.id]:e.target.value})
     }
     const handleSubmit= async ()=>{
         try{
             const res = await axios.post('http://localhost:8000/login/', data);
+            setMessage(res.data.message);
             if (res.data.message === "Login Successfully") {
             navigate('/userdata'); 
             }
@@ -37,6 +40,7 @@ function Login () {
             <label htmlFor="password">password</label>
             <input id="password" type="password" value={data.password} onChange={inputHandle}></input><br/>
             <button id="submit" onClick={handleSubmit}>Login</button>
+            {message && <p >{message}</p>}
         </div>
     )
 };
