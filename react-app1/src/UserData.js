@@ -43,6 +43,7 @@ function Userdata() {
             <th>User Name</th>
             <th>Email</th>
             <th>Phone Number</th>
+            <th>Role</th>
           </tr>
         </thead>
         <tbody>
@@ -63,6 +64,7 @@ function Userdata() {
                   onChange={(e) => handleChange(index, 'phNumber', e.target.value)}
                 />
               </td>
+              <td>{u.role}</td>
             </tr>
           ))}
         </tbody>

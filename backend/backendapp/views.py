@@ -30,7 +30,7 @@ class RegisterView(View):
                 data["password"].encode("utf-8"), bcrypt.gensalt()
             )
             data["password"] = hashed_pass.decode("utf-8")
-
+            data["role"] = "user"
             user_collection.insert_one(data)
             return JsonResponse(
                 {"message": "User registered successfully!"}, status=201
@@ -70,7 +70,7 @@ class GetUsersView(View):
         try:
             users = list(
                 user_collection.find(
-                    {}, {"_id": 0, "userName": 1, "email": 1, "phNumber": 1}
+                    {}, {"_id": 0, "userName": 1, "email": 1, "phNumber": 1, "role": 1}
                 )
             )
             return JsonResponse(users, safe=False)
