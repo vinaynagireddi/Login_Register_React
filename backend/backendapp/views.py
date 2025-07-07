@@ -82,7 +82,7 @@ class GetUsersView(View):
             body = json.loads(request.body)
             for user in body:
                 user_collection.update_one(
-                    {"email": user["email"]},  # use email as unique identifier
+                    {"email": user["email"]},
                     {
                         "$set": {
                             "userName": user["userName"],
