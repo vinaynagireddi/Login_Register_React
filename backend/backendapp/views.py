@@ -9,6 +9,7 @@ import json
 import pdfkit
 from datetime import datetime
 import uuid
+from django.shortcuts import redirect
 
 client = MongoClient("mongodb://localhost:27017/")
 db = client["offDatabase"]
@@ -83,29 +84,39 @@ class GetUsersView(View):
 
     def get(self, request):
         try:
-            users = list(
-                user_collection.find(
-                    {}, {"_id": 0, "userName": 1, "email": 1, "phNumber": 1, "role": 1}
+            print("in try")
+            response_data = {}
+            if verify_session(request, response_data) and response_data.get("code") == 200:
+                print("in sess")
+                users = list(
+                    user_collection.find(
+                        {}, {"_id": 0, "userName": 1, "email": 1, "phNumber": 1, "role": 1}
+                    )
                 )
-            )
-            return JsonResponse(users, safe=False)
+                return JsonResponse(users, safe=False)
+            else:
+                return JsonResponse({"message": "Invalid Session"}, status=401)
         except Exception as e:
             return JsonResponse({"message": str(e)}, status=500)
 
     def post(self, request):
         try:
-            body = json.loads(request.body)
-            for user in body:
-                user_collection.update_one(
-                    {"email": user["email"]},
-                    {
-                        "$set": {
-                            "userName": user["userName"],
-                            "phNumber": user["phNumber"],
-                        }
-                    },
-                )
-            return JsonResponse({"message": "Users updated successfully"})
+            response_data = {}
+            if verify_session(request, response_data) and response_data.get("code") == 200:
+                body = json.loads(request.body)
+                for user in body:
+                    user_collection.update_one(
+                        {"email": user["email"]},
+                        {
+                            "$set": {
+                                "userName": user["userName"],
+                                "phNumber": user["phNumber"],
+                            }
+                        },
+                    )
+                return JsonResponse({"message": "Users updated successfully"})
+            else:
+                return JsonResponse({"message": "Invalid Session"}, status=401)
         except Exception as e:
             return JsonResponse({"message": str(e)}, status=500)
 
@@ -142,9 +153,3 @@ def verify_session(http_req, response):
         response.update({"message": str(e), "status": "error", "code": 500})
         return False
 
-
-
-# checkRole = bfs.verify_session(request,response)
-#             if "code" in checkRole and checkRole['code'] == 200:
-#             else:
-#                 return redirect("/", permanent=True)
