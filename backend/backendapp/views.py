@@ -89,19 +89,19 @@ class GetUsersView(View):
 
     def get(self, request):
         try:
-            print("in try")
-            response_data = {}
-            print("ghfdx",response_data)
-            if verify_session(request, response_data) and response_data.get("code") == 200:
-                print("in sess")
+            # print("in try")
+            # response_data = {}
+            # print("ghfdx",response_data)
+            # if verify_session(request, response_data) and response_data.get("code") == 200:
+            #     print("in sess")
                 users = list(
                     user_collection.find(
                         {}, {"_id": 0, "userName": 1, "email": 1, "phNumber": 1, "role": 1}
                     )
                 )
                 return JsonResponse(users, safe=False)
-            else:
-                return JsonResponse({"message": "Invalid Session"}, status=401)
+            # else:
+            #     return JsonResponse({"message": "Invalid Session"}, status=401)
         except Exception as e:
             return JsonResponse({"message": str(e)}, status=500)
 

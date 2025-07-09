@@ -11,7 +11,7 @@ function Userdata() {
     axios.get("http://localhost:8000/userdata/")
       .then((res) => {
         setUsers(res.data);
-        setEditedUsers(res.data); // copy to editable state
+        setEditedUsers(res.data);
       })
       .catch((err) => {
         console.error("Error fetching user data", err);
