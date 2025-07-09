@@ -107,8 +107,8 @@ class GetUsersView(View):
 
     def post(self, request):
         try:
-            response_data = {}
-            if verify_session(request, response_data) and response_data.get("code") == 200:
+            # response_data = {}
+            # if verify_session(request, response_data) and response_data.get("code") == 200:
                 body = json.loads(request.body)
                 for user in body:
                     user_collection.update_one(
@@ -121,8 +121,8 @@ class GetUsersView(View):
                         },
                     )
                 return JsonResponse({"message": "Users updated successfully"})
-            else:
-                return JsonResponse({"message": "Invalid Session"}, status=401)
+            # else:
+            #     return JsonResponse({"message": "Invalid Session"}, status=401)
         except Exception as e:
             return JsonResponse({"message": str(e)}, status=500)
 
