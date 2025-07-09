@@ -20,7 +20,6 @@ user_collection = db["reactcoll"]
 class RegisterView(View):
     def post(self, request):
         try:
-            
             data = json.loads(request.body)
 
             if user_collection.find_one({"userName": data["userName"]}):
@@ -60,22 +59,29 @@ class LoginView(View):
                 if bcrypt.checkpw(password.encode("utf-8"), stored_pass):
                     existing_session = db.SessionHistory.find_one({"email": email})
                     if existing_session:
-                        return JsonResponse({
-                            "message": "Already logged in on another device",
-                            "status": "failed"
-                        }, status=409)
+                        return JsonResponse(
+                            {
+                                "message": "Already logged in on another device",
+                                "status": "failed",
+                            },
+                            status=409,
+                        )
                     else:
                         session_key = str(uuid.uuid4())
                         request.session["session_key"] = session_key
                         request.session["role"] = user.get("role", "user")
                         request.session["login_time"] = datetime.now().isoformat()
-                        db.SessionHistory.insert_one({
-                            "email": email,
-                            "session_key": session_key,
-                            "role": user.get("role", "user"),
-                            "login_time": datetime.now().isoformat()
-                        })
-                        return JsonResponse({"message": "Login Successfully"}, status=200)
+                        db.SessionHistory.insert_one(
+                            {
+                                "email": email,
+                                "session_key": session_key,
+                                "role": user.get("role", "user"),
+                                "login_time": datetime.now(),
+                            }
+                        )
+                        return JsonResponse(
+                            {"message": "Login Successfully"}, status=200
+                        )
                 else:
                     return JsonResponse({"message": "Invalid Password"}, status=401)
             else:
@@ -86,29 +92,23 @@ class LoginView(View):
 
 @method_decorator(csrf_exempt, name="dispatch")
 class GetUsersView(View):
-
     def get(self, request):
         try:
-            # print("in try")
-            # response_data = {}
-            # print("ghfdx",response_data)
-            # if verify_session(request, response_data) and response_data.get("code") == 200:
-            #     print("in sess")
-                users = list(
-                    user_collection.find(
-                        {}, {"_id": 0, "userName": 1, "email": 1, "phNumber": 1, "role": 1}
-                    )
+            users = list(
+                user_collection.find(
+                    {}, {"_id": 0, "userName": 1, "email": 1, "phNumber": 1, "role": 1}
                 )
-                return JsonResponse(users, safe=False)
-            # else:
-            #     return JsonResponse({"message": "Invalid Session"}, status=401)
+            )
+            return JsonResponse(users, safe=False)
         except Exception as e:
             return JsonResponse({"message": str(e)}, status=500)
 
     def post(self, request):
         try:
-            # response_data = {}
-            # if verify_session(request, response_data) and response_data.get("code") == 200:
+            session_key = request.session.get("session_key")
+            print("sesssssss", session_key)
+            session_user = db.SessionHistory.find_one({"session_key": session_key})
+            if session_user and session_user.get("role") == "Admin":
                 body = json.loads(request.body)
                 for user in body:
                     user_collection.update_one(
@@ -120,9 +120,13 @@ class GetUsersView(View):
                             }
                         },
                     )
-                return JsonResponse({"message": "Users updated successfully"})
-            # else:
-            #     return JsonResponse({"message": "Invalid Session"}, status=401)
+                return JsonResponse(
+                    {"message": "Users updated successfully"}, status=200
+                )
+            else:
+                return JsonResponse(
+                    {"message": "User not authorized to change details"}, status=403
+                )
         except Exception as e:
             return JsonResponse({"message": str(e)}, status=500)
 
@@ -141,6 +145,7 @@ class DownloadUsersPDFView(View):
         except Exception as e:
             return JsonResponse({"message": str(e)}, status=500)
 
+
 def verify_session(http_req, response):
     try:
         session_data = dict(http_req.session.items())
@@ -152,7 +157,9 @@ def verify_session(http_req, response):
                 {"session_key": session_data["session_key"]}, {"_id": 0}
             )
             if user_session_info:
-                response.update({"message": "Valid Session", "status": "success", "code": 200})
+                response.update(
+                    {"message": "Valid Session", "status": "success", "code": 200}
+                )
                 response["session"] = user_session_info
                 return True
         return False
@@ -160,3 +167,17 @@ def verify_session(http_req, response):
         response.update({"message": str(e), "status": "error", "code": 500})
         return False
 
+
+@method_decorator(csrf_exempt, name="dispatch")
+class Logout(View):
+    def post(self, request):
+        try:
+            session_key = request.session.get("session_key")
+            if session_key:
+                db.SessionHistory.delete_one({"session_key": session_key})
+                request.session.flush()
+                return JsonResponse({"message": "Logged out successfully"}, status=200)
+            else:
+                return JsonResponse({"message": "No active session"}, status=400)
+        except Exception as e:
+            return JsonResponse({"message": str(e)}, status=500)

@@ -32,7 +32,19 @@ function Userdata() {
       .catch((err) => {
         console.error("Error saving user data", err);
       });
+    };
+  const handleLogout = () => {
+  axios.post("http://localhost:8000/logout/", {}, { withCredentials: true })
+    .then(() => {
+      alert("Logged out successfully!");
+      window.location.href = "/login"; // or your home page
+    })
+    .catch((err) => {
+      console.error("Logout failed", err);
+      alert("Logout failed. Check console.");
+    });
   };
+
 
   return (
     <div className="users-container">
@@ -72,6 +84,7 @@ function Userdata() {
 
       <button className="save-btn" onClick={handleSave}>Save Changes</button>
       <button className="download-btn" onClick={() => window.open("http://localhost:8000/download-users/")}>Download</button>
+      <button className="logout" onClick={handleLogout}>Logout</button>
     </div>
   );
 }
