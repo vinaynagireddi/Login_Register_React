@@ -52,29 +52,34 @@ class LoginView(View):
             password = data.get("password")
 
             if not email or not password:
-                return JsonResponse({"message": "Fill All  fields"})
+                return JsonResponse({"message": "Fill All  fields"}, status=400)
 
             user = user_collection.find_one({"email": email})
             if user:
                 stored_pass = user.get("password").encode("utf-8")
                 if bcrypt.checkpw(password.encode("utf-8"), stored_pass):
-                    session_key = str(uuid.uuid4())
-                    request.session["session_key"] = session_key
-                    request.session["role"] = user.get("role", "user")
-                    request.session["login_time"] = datetime.now().isoformat()
-
-                    # ✅ Optional: Store session in MongoDB
-                    db.SessionHistory.insert_one({
-                        "email": email,
-                        "session_key": session_key,
-                        "role": user.get("role", "user"),
-                        "login_time": datetime.now().isoformat()
-                    })
-                    return JsonResponse({"message": "Login Successfully"})
+                    existing_session = db.SessionHistory.find_one({"email": email})
+                    if existing_session:
+                        return JsonResponse({
+                            "message": "Already logged in on another device",
+                            "status": "failed"
+                        }, status=409)
+                    else:
+                        session_key = str(uuid.uuid4())
+                        request.session["session_key"] = session_key
+                        request.session["role"] = user.get("role", "user")
+                        request.session["login_time"] = datetime.now().isoformat()
+                        db.SessionHistory.insert_one({
+                            "email": email,
+                            "session_key": session_key,
+                            "role": user.get("role", "user"),
+                            "login_time": datetime.now().isoformat()
+                        })
+                        return JsonResponse({"message": "Login Successfully"}, status=200)
                 else:
-                    return JsonResponse({"message": "Invalid Password"})
+                    return JsonResponse({"message": "Invalid Password"}, status=401)
             else:
-                return JsonResponse({"message": "User Not Found"})
+                return JsonResponse({"message": "User Not Found"}, status=404)
         except Exception as e:
             return JsonResponse({"message": str(e)}, status=500)
 
@@ -86,6 +91,7 @@ class GetUsersView(View):
         try:
             print("in try")
             response_data = {}
+            print("ghfdx",response_data)
             if verify_session(request, response_data) and response_data.get("code") == 200:
                 print("in sess")
                 users = list(
@@ -138,6 +144,7 @@ class DownloadUsersPDFView(View):
 def verify_session(http_req, response):
     try:
         session_data = dict(http_req.session.items())
+        print("Session Data:", session_data)
         response.update({"message": "Invalid Session", "status": "failed", "code": 401})
 
         if "session_key" in session_data and session_data["session_key"]:
