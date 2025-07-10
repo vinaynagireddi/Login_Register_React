@@ -51,82 +51,132 @@ class LoginView(View):
             password = data.get("password")
 
             if not email or not password:
-                return JsonResponse({"message": "Fill All  fields"}, status=400)
+                return JsonResponse(
+                    {"message": "Please fill in all fields", "status": "failed"},
+                    status=400,
+                )
 
             user = user_collection.find_one({"email": email})
-            if user:
-                stored_pass = user.get("password").encode("utf-8")
-                if bcrypt.checkpw(password.encode("utf-8"), stored_pass):
-                    existing_session = db.SessionHistory.find_one({"email": email})
-                    if existing_session:
-                        return JsonResponse(
-                            {
-                                "message": "Already logged in on another device",
-                                "status": "failed",
-                            },
-                            status=409,
-                        )
-                    else:
-                        session_key = str(uuid.uuid4())
-                        request.session["session_key"] = session_key
-                        request.session["role"] = user.get("role", "user")
-                        request.session["login_time"] = datetime.now().isoformat()
-                        db.SessionHistory.insert_one(
-                            {
-                                "email": email,
-                                "session_key": session_key,
-                                "role": user.get("role", "user"),
-                                "login_time": datetime.now(),
-                            }
-                        )
-                        return JsonResponse(
-                            {"message": "Login Successfully"}, status=200
-                        )
-                else:
-                    return JsonResponse({"message": "Invalid Password"}, status=401)
+            if not user:
+                return JsonResponse(
+                    {"message": "User not found", "status": "failed"}, status=404
+                )
+
+            stored_pass = user.get("password")
+            if not stored_pass:
+                return JsonResponse(
+                    {"message": "Password not set for this user", "status": "failed"},
+                    status=500,
+                )
+
+            if bcrypt.checkpw(password.encode("utf-8"), stored_pass.encode("utf-8")):
+                existing_session = db.SessionHistory.find_one({"email": email})
+                if existing_session:
+                    return JsonResponse(
+                        {
+                            "message": "Already logged in on another device",
+                            "status": "failed",
+                        },
+                        status=409,
+                    )
+                session_key = str(uuid.uuid4())
+                request.session["sessionKey"] = session_key
+                request.session["role"] = user.get("role", "user")
+                request.session["login_time"] = datetime.now().isoformat()
+
+                db.SessionHistory.insert_one(
+                    {
+                        "email": email,
+                        "sessionKey": session_key,
+                        "role": user.get("role", "user"),
+                        "loginTime": datetime.now(),
+                        "lastActivityOn": datetime.now(),
+                    }
+                )
+                return JsonResponse(
+                    {
+                        "message": "Login Successful",
+                        "status": "success",
+                        "sessionKey": session_key,
+                        "role": user.get("role", "user"),
+                    },
+                    status=200,
+                )
             else:
-                return JsonResponse({"message": "User Not Found"}, status=404)
+                return JsonResponse(
+                    {"message": "Invalid password", "status": "failed"}, status=401
+                )
+        except json.JSONDecodeError:
+            return JsonResponse(
+                {"message": "Invalid JSON", "status": "failed"}, status=400
+            )
         except Exception as e:
-            return JsonResponse({"message": str(e)}, status=500)
+            return JsonResponse(
+                {"message": f"Server error: {str(e)}", "status": "failed"}, status=500
+            )
 
 
 @method_decorator(csrf_exempt, name="dispatch")
 class GetUsersView(View):
     def get(self, request):
+        response = {
+            "message": "",
+            "code": 400,
+            "callback": __class__.__name__,
+            "status": "failed",
+        }
+
         try:
+            session_check = verifySession(request, response.copy())
+            if session_check["code"] != 200:
+                return JsonResponse(session_check, status=session_check["code"])
+
             users = list(
                 user_collection.find(
                     {}, {"_id": 0, "userName": 1, "email": 1, "phNumber": 1, "role": 1}
                 )
             )
             return JsonResponse(users, safe=False)
+
         except Exception as e:
             return JsonResponse({"message": str(e)}, status=500)
 
     def post(self, request):
+        response = {
+            "message": "",
+            "code": 400,
+            "callback": __class__.__name__,
+            "status": "failed",
+        }
+
         try:
-            session_key = request.session.get("session_key")
-            print("sesssssss", session_key)
-            session_user = db.SessionHistory.find_one({"session_key": session_key})
-            if session_user and session_user.get("role") == "Admin":
-                body = json.loads(request.body)
-                for user in body:
-                    user_collection.update_one(
-                        {"email": user["email"]},
-                        {
-                            "$set": {
-                                "userName": user["userName"],
-                                "phNumber": user["phNumber"],
-                            }
-                        },
-                    )
+            session_check = verifySession(request, response.copy())
+            if session_check["code"] != 200:
+                return JsonResponse(session_check, status=session_check["code"])
+
+            if session_check["userDetails"].get("role") != "Admin":
                 return JsonResponse(
-                    {"message": "Users updated successfully"}, status=200
+                    {
+                        "message": "User not authorized to change details",
+                        "status": "failed",
+                        "code": 403,
+                    },
+                    status=403,
                 )
-            else:
-                return JsonResponse(
-                    {"message": "User not authorized to change details"}, status=403
+
+            body = json.loads(request.body)
+            for user in body:
+                user_collection.update_one(
+                    {"email": user["email"]},
+                    {
+                        "$set": {
+                            "userName": user["userName"],
+                            "phNumber": user["phNumber"],
+                        }
+                    },
                 )
+            return JsonResponse({"message": "Users updated successfully"}, status=200)
+
         except Exception as e:
             return JsonResponse({"message": str(e)}, status=500)
 
@@ -146,26 +196,69 @@ class DownloadUsersPDFView(View):
             return JsonResponse({"message": str(e)}, status=500)
 
 
-def verify_session(http_req, response):
-    try:
-        session_data = dict(http_req.session.items())
-        print("Session Data:", session_data)
-        response.update({"message": "Invalid Session", "status": "failed", "code": 401})
+def verifySession(http_req, response):
+    session_data = dict(http_req.session.items())
+    response.update({"message": "Invalid Session", "status": "failed", "code": 401})
 
-        if "session_key" in session_data and session_data["session_key"]:
-            user_session_info = db.SessionHistory.find_one(
-                {"session_key": session_data["session_key"]}, {"_id": 0}
-            )
-            if user_session_info:
+    if "sessionKey" in session_data and session_data["sessionKey"]:
+        session_key = session_data["sessionKey"]
+        userSessionInfo = db.SessionHistory.find_one(
+            {"sessionKey": session_key}, {"_id": 0}
+        )
+
+        if userSessionInfo:
+            recent_activity = datetime.now()
+            last_activity = userSessionInfo.get("lastActivityOn")
+            if last_activity:
+                delta_time = recent_activity - last_activity
+                delta_minutes = delta_time.total_seconds() / 60
+
+                # Check session timeout (example: 30 minutes)
+                if delta_minutes <= 30:
+                    db.SessionHistory.update_one(
+                        {"sessionKey": session_key},
+                        {"$set": {"lastActivityOn": recent_activity}},
+                    )
+
+                    response.update(
+                        {
+                            "message": "Session Verification Successful",
+                            "userDetails": userSessionInfo,
+                            "code": 200,
+                            "status": "success",
+                        }
+                    )
+                else:
+                    sessionKeyDeleteCount = db.SessionHistory.delete_one(
+                        {"sessionKey": session_key}
+                    ).deleted_count
+                    response.update(
+                        {
+                            "message": "Session Expired",
+                            "code": 401,
+                            "status": "failed",
+                            "sessionKeyDeleteCount": sessionKeyDeleteCount,
+                        }
+                    )
+            else:
                 response.update(
-                    {"message": "Valid Session", "status": "success", "code": 200}
+                    {
+                        "message": "Session data incomplete: 'lastActivityOn' missing",
+                        "code": 500,
+                    }
                 )
-                response["session"] = user_session_info
-                return True
-        return False
-    except Exception as e:
-        response.update({"message": str(e), "status": "error", "code": 500})
-        return False
+        else:
+            response.update({"message": "Session Key Not Found", "code": 401})
+    else:
+        response.update(
+            {
+                "message": "Invalid Session Data or Session Key not found",
+                "code": 401,
+                "status": "failed",
+            }
+        )
+
+    return response
 
 
 @method_decorator(csrf_exempt, name="dispatch")

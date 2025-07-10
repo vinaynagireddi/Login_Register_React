@@ -18,7 +18,7 @@ function Login () {
         try{
             const res = await axios.post('http://localhost:8000/login/', data);
             setMessage(res.data.message);
-            if (res.data.message === "Login Successfully") {
+            if ( res.status === 200) {
             navigate('/userdata'); 
             }
 

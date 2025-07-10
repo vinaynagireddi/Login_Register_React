@@ -8,13 +8,23 @@ function Userdata() {
   const [editedUsers, setEditedUsers] = useState([]);
 
   useEffect(() => {
-    axios.get("http://localhost:8000/userdata/")
+    axios.get("http://localhost:8000/userdata/", { withCredentials: true })
       .then((res) => {
-        setUsers(res.data);
-        setEditedUsers(res.data);
+        if (Array.isArray(res.data)) {
+          setUsers(res.data);
+          setEditedUsers(res.data);
+        } else {
+          alert(res.data.message || "Unexpected response format");
+        }
       })
       .catch((err) => {
-        console.error("Error fetching user data", err);
+        if (err.response?.status === 401) {
+          alert("Session expired. Please login again.");
+          window.location.href = "/login";
+        } else {
+          console.error("Error fetching user data", err);
+          alert("Failed to fetch user data.");
+        }
       });
   }, []);
 
@@ -25,26 +35,34 @@ function Userdata() {
   };
 
   const handleSave = () => {
-    axios.post("http://localhost:8000/userdata/", editedUsers)
-      .then(() => {
-        alert("User data updated successfully!");
+    axios.post("http://localhost:8000/userdata/", editedUsers, { withCredentials: true })
+      .then((res) => {
+        alert(res.data.message || "User data updated successfully!");
       })
       .catch((err) => {
-        console.error("Error saving user data", err);
+        if (err.response?.status === 403) {
+          alert("You are not authorized to make changes.");
+        } else if (err.response?.status === 401) {
+          alert("Session expired. Please login again.");
+          window.location.href = "/login";
+        } else {
+          console.error("Error saving user data", err);
+          alert("Failed to save user data.");
+        }
       });
-    };
-  const handleLogout = () => {
-  axios.post("http://localhost:8000/logout/", {}, { withCredentials: true })
-    .then(() => {
-      alert("Logged out successfully!");
-      window.location.href = "/login"; // or your home page
-    })
-    .catch((err) => {
-      console.error("Logout failed", err);
-      alert("Logout failed. Check console.");
-    });
   };
 
+  const handleLogout = () => {
+    axios.post("http://localhost:8000/logout/", {}, { withCredentials: true })
+      .then(() => {
+        alert("Logged out successfully!");
+        window.location.href = "/login";
+      })
+      .catch((err) => {
+        console.error("Logout failed", err);
+        alert("Logout failed. Check console.");
+      });
+  };
 
   return (
     <div className="users-container">
@@ -83,7 +101,12 @@ function Userdata() {
       </table>
 
       <button className="save-btn" onClick={handleSave}>Save Changes</button>
-      <button className="download-btn" onClick={() => window.open("http://localhost:8000/download-users/")}>Download</button>
+      <button
+        className="download-btn"
+        onClick={() => window.open("http://localhost:8000/download-users/")}
+      >
+        Download
+      </button>
       <button className="logout" onClick={handleLogout}>Logout</button>
     </div>
   );
