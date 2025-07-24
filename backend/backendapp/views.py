@@ -70,6 +70,7 @@ class LoginView(View):
                 )
 
             if bcrypt.checkpw(password.encode("utf-8"), stored_pass.encode("utf-8")):
+                # Check for existing session
                 existing_session = db.SessionHistory.find_one({"email": email})
                 if existing_session:
                     return JsonResponse(
@@ -79,11 +80,14 @@ class LoginView(View):
                         },
                         status=409,
                     )
+
+                # Generate session
                 session_key = str(uuid.uuid4())
-                request.session["sessionKey"] = session_key
+                request.session["sessionKey"] = session_key  # ✅ Must match everywhere
                 request.session["role"] = user.get("role", "user")
                 request.session["login_time"] = datetime.now().isoformat()
 
+                # Save session in DB
                 db.SessionHistory.insert_one(
                     {
                         "email": email,
@@ -93,6 +97,11 @@ class LoginView(View):
                         "lastActivityOn": datetime.now(),
                     }
                 )
+
+                print(
+                    "Session Set:", dict(request.session.items())
+                )  # ✅ Optional debug
+
                 return JsonResponse(
                     {
                         "message": "Login Successful",
@@ -102,10 +111,12 @@ class LoginView(View):
                     },
                     status=200,
                 )
+
             else:
                 return JsonResponse(
                     {"message": "Invalid password", "status": "failed"}, status=401
                 )
+
         except json.JSONDecodeError:
             return JsonResponse(
                 {"message": "Invalid JSON", "status": "failed"}, status=400
@@ -119,23 +130,25 @@ class LoginView(View):
 @method_decorator(csrf_exempt, name="dispatch")
 class GetUsersView(View):
     def get(self, request):
+        print("=== IN GET ===")
         response = {
             "message": "",
             "code": 400,
             "callback": __class__.__name__,
             "status": "failed",
         }
-
+        print("in get userrrrrrrrrrr")
         try:
             session_check = verifySession(request, response.copy())
+            print(session_check, "111111111111111111")
             if session_check["code"] != 200:
                 return JsonResponse(session_check, status=session_check["code"])
-
             users = list(
                 user_collection.find(
                     {}, {"_id": 0, "userName": 1, "email": 1, "phNumber": 1, "role": 1}
                 )
             )
+            print(users, "000000000000000000000000000000000000000000000000000000")
             return JsonResponse(users, safe=False)
 
         except Exception as e:
@@ -151,6 +164,7 @@ class GetUsersView(View):
 
         try:
             session_check = verifySession(request, response.copy())
+            print("222222222222", session_check)
             if session_check["code"] != 200:
                 return JsonResponse(session_check, status=session_check["code"])
 
@@ -190,18 +204,35 @@ class DownloadUsersPDFView(View):
                 )
             )
             html = render_to_string("users_template.html", {"users": users})
-            pdf = pdfkit.from_string(html, False)
-            return HttpResponse(pdf, content_type="application/pdf")
+
+            # Path to wkhtmltopdf (use raw string to avoid backslash issues)
+            path_wkhtmltopdf = r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
+
+            config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
+
+            pdf = pdfkit.from_string(html, False, configuration=config)
+
+            response = HttpResponse(pdf, content_type="application/pdf")
+            response["Content-Disposition"] = 'attachment; filename="users.pdf"'
+            return response
+
         except Exception as e:
             return JsonResponse({"message": str(e)}, status=500)
 
 
 def verifySession(http_req, response):
     session_data = dict(http_req.session.items())
+    session_key = session_data.get("sessionKey")
+
+    # 🔄 Try to get sessionKey from header if not in session
+    if not session_key:
+        session_key = http_req.headers.get("X-Session-Key")
+
+    print("VERIFY session_key:", session_key)
+
     response.update({"message": "Invalid Session", "status": "failed", "code": 401})
 
-    if "sessionKey" in session_data and session_data["sessionKey"]:
-        session_key = session_data["sessionKey"]
+    if session_key:
         userSessionInfo = db.SessionHistory.find_one(
             {"sessionKey": session_key}, {"_id": 0}
         )
@@ -212,14 +243,11 @@ def verifySession(http_req, response):
             if last_activity:
                 delta_time = recent_activity - last_activity
                 delta_minutes = delta_time.total_seconds() / 60
-
-                # Check session timeout (example: 30 minutes)
                 if delta_minutes <= 30:
                     db.SessionHistory.update_one(
                         {"sessionKey": session_key},
                         {"$set": {"lastActivityOn": recent_activity}},
                     )
-
                     response.update(
                         {
                             "message": "Session Verification Successful",
@@ -229,7 +257,7 @@ def verifySession(http_req, response):
                         }
                     )
                 else:
-                    sessionKeyDeleteCount = db.SessionHistory.delete_one(
+                    count = db.SessionHistory.delete_one(
                         {"sessionKey": session_key}
                     ).deleted_count
                     response.update(
@@ -237,7 +265,7 @@ def verifySession(http_req, response):
                             "message": "Session Expired",
                             "code": 401,
                             "status": "failed",
-                            "sessionKeyDeleteCount": sessionKeyDeleteCount,
+                            "sessionKeyDeleteCount": count,
                         }
                     )
             else:
@@ -249,15 +277,6 @@ def verifySession(http_req, response):
                 )
         else:
             response.update({"message": "Session Key Not Found", "code": 401})
-    else:
-        response.update(
-            {
-                "message": "Invalid Session Data or Session Key not found",
-                "code": 401,
-                "status": "failed",
-            }
-        )
-
     return response
 
 
@@ -265,9 +284,11 @@ def verifySession(http_req, response):
 class Logout(View):
     def post(self, request):
         try:
-            session_key = request.session.get("session_key")
+            session_key = request.session.get("sessionKey")  # ✅ Corrected key
             if session_key:
-                db.SessionHistory.delete_one({"session_key": session_key})
+                db.SessionHistory.delete_one(
+                    {"sessionKey": session_key}
+                )  # ✅ Corrected key
                 request.session.flush()
                 return JsonResponse({"message": "Logged out successfully"}, status=200)
             else:

@@ -24,7 +24,7 @@ SECRET_KEY = "django-insecure-5m@jawowmo_t_3tbc(^!2g0mw_hjq47ktsnvaf!f#8rir3wcbe
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-
+SESSION_COOKIE_NAME = "sessionid"
 ALLOWED_HOSTS = []
 
 
@@ -53,12 +53,18 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+CORS_ALLOW_CREDENTIALS = True
 # CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # React dev server
 ]
-
-CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "content-type",
+    "x-session-key",
+    "authorization",
+    "x-requested-with",
+]
 SESSION_COOKIE_SAMESITE = "Lax"  # or 'None' if cross-site and using HTTPS
 SESSION_COOKIE_SECURE = False  # True if you're using HTTPS
 SESSION_ENGINE = "django.contrib.sessions.backends.db"  # default

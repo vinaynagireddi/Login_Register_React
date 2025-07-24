@@ -19,6 +19,7 @@ function Login () {
             const res = await axios.post('http://localhost:8000/login/', data);
             setMessage(res.data.message);
             if ( res.status === 200) {
+                localStorage.setItem("sessionKey", res.data.sessionKey);
             navigate('/userdata'); 
             }
 
