@@ -98,10 +98,6 @@ class LoginView(View):
                     }
                 )
 
-                print(
-                    "Session Set:", dict(request.session.items())
-                )  # ✅ Optional debug
-
                 return JsonResponse(
                     {
                         "message": "Login Successful",
@@ -130,17 +126,14 @@ class LoginView(View):
 @method_decorator(csrf_exempt, name="dispatch")
 class GetUsersView(View):
     def get(self, request):
-        print("=== IN GET ===")
         response = {
             "message": "",
             "code": 400,
             "callback": __class__.__name__,
             "status": "failed",
         }
-        print("in get userrrrrrrrrrr")
         try:
             session_check = verifySession(request, response.copy())
-            print(session_check, "111111111111111111")
             if session_check["code"] != 200:
                 return JsonResponse(session_check, status=session_check["code"])
             users = list(
@@ -148,7 +141,6 @@ class GetUsersView(View):
                     {}, {"_id": 0, "userName": 1, "email": 1, "phNumber": 1, "role": 1}
                 )
             )
-            print(users, "000000000000000000000000000000000000000000000000000000")
             return JsonResponse(users, safe=False)
 
         except Exception as e:
@@ -227,9 +219,6 @@ def verifySession(http_req, response):
     # 🔄 Try to get sessionKey from header if not in session
     if not session_key:
         session_key = http_req.headers.get("X-Session-Key")
-
-    print("VERIFY session_key:", session_key)
-
     response.update({"message": "Invalid Session", "status": "failed", "code": 401})
 
     if session_key:
@@ -284,11 +273,9 @@ def verifySession(http_req, response):
 class Logout(View):
     def post(self, request):
         try:
-            session_key = request.session.get("sessionKey")  # ✅ Corrected key
+            session_key = request.headers.get("X-Session-Key")
             if session_key:
-                db.SessionHistory.delete_one(
-                    {"sessionKey": session_key}
-                )  # ✅ Corrected key
+                db.SessionHistory.delete_one({"sessionKey": session_key})
                 request.session.flush()
                 return JsonResponse({"message": "Logged out successfully"}, status=200)
             else:
