@@ -21,7 +21,6 @@ class RegisterView(View):
     def post(self, request):
         try:
             data = json.loads(request.body)
-
             if user_collection.find_one({"userName": data["userName"]}):
                 return JsonResponse({"message": "user Name already existed"})
             if user_collection.find_one({"phNumber": data["phNumber"]}):
@@ -80,14 +79,10 @@ class LoginView(View):
                         },
                         status=409,
                     )
-
-                # Generate session
                 session_key = str(uuid.uuid4())
-                request.session["sessionKey"] = session_key  # ✅ Must match everywhere
+                request.session["sessionKey"] = session_key
                 request.session["role"] = user.get("role", "user")
                 request.session["login_time"] = datetime.now().isoformat()
-
-                # Save session in DB
                 db.SessionHistory.insert_one(
                     {
                         "email": email,
@@ -97,7 +92,6 @@ class LoginView(View):
                         "lastActivityOn": datetime.now(),
                     }
                 )
-
                 return JsonResponse(
                     {
                         "message": "Login Successful",
@@ -107,16 +101,10 @@ class LoginView(View):
                     },
                     status=200,
                 )
-
             else:
                 return JsonResponse(
                     {"message": "Invalid password", "status": "failed"}, status=401
                 )
-
-        except json.JSONDecodeError:
-            return JsonResponse(
-                {"message": "Invalid JSON", "status": "failed"}, status=400
-            )
         except Exception as e:
             return JsonResponse(
                 {"message": f"Server error: {str(e)}", "status": "failed"}, status=500
@@ -196,8 +184,6 @@ class DownloadUsersPDFView(View):
                 )
             )
             html = render_to_string("users_template.html", {"users": users})
-
-            # Path to wkhtmltopdf (use raw string to avoid backslash issues)
             path_wkhtmltopdf = r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
 
             config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)

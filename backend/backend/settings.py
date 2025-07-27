@@ -24,7 +24,6 @@ SECRET_KEY = "django-insecure-5m@jawowmo_t_3tbc(^!2g0mw_hjq47ktsnvaf!f#8rir3wcbe
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-SESSION_COOKIE_NAME = "sessionid"
 ALLOWED_HOSTS = []
 
 
@@ -47,7 +46,6 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -65,9 +63,6 @@ CORS_ALLOW_HEADERS = [
     "authorization",
     "x-requested-with",
 ]
-SESSION_COOKIE_SAMESITE = "Lax"  # or 'None' if cross-site and using HTTPS
-SESSION_COOKIE_SECURE = False  # True if you're using HTTPS
-SESSION_ENGINE = "django.contrib.sessions.backends.db"  # default
 
 ROOT_URLCONF = "backend.urls"
 
