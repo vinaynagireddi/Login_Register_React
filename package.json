@@ -1,0 +1,8 @@
+{
+    "scripts": {
+        "start": "concurrently \"npm --prefix react-app1 start\" \"cd backend && python manage.py runserver\""
+    },
+    "devDependencies": {
+        "concurrently": "^9.2.0"
+    }
+}
