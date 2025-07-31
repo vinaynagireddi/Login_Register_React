@@ -61,13 +61,11 @@ function Userdata() {
   };
 
   const handleLogout = () => {
-  const sessionKey = localStorage.getItem("sessionKey");
 
   axios.post("http://localhost:8000/logout/", null, {
     headers: {
       "X-Session-Key": sessionKey
     },
-    withCredentials: true  // Optional: if you're using Django sessions/cookies
   })
   .then((res) => {
     alert(res.data.message || "Logged out successfully!");
