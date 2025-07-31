@@ -24,7 +24,7 @@ function Login () {
             }
 
         }catch(error){
-            console.error(error);
+            setMessage(error.response?.data?.message || "Login failed. Please try again.");
         }
         setData({
             email:'',
