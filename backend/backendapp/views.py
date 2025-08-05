@@ -157,8 +157,8 @@ class GetUsersView(View):
                     status=403,
                 )
 
-            body = json.loads(request.body)
-            for user in body:
+            oldData = json.loads(request.body)
+            for user in oldData:
                 user_collection.update_one(
                     {"email": user["email"]},
                     {
