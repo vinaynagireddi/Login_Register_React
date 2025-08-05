@@ -10,10 +10,8 @@ import pdfkit
 from datetime import datetime
 import uuid
 from django.shortcuts import redirect
+import backend.settings as sts
 
-client = MongoClient("mongodb://localhost:27017/")
-db = client["offDatabase"]
-user_collection = db["reactcoll"]
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -21,11 +19,11 @@ class RegisterView(View):
     def post(self, request):
         try:
             data = json.loads(request.body)
-            if user_collection.find_one({"userName": data["userName"]}):
+            if sts.dbcursor.reactcoll.find_one({"userName": data["userName"]}):
                 return JsonResponse({"message": "user Name already existed"})
-            if user_collection.find_one({"phNumber": data["phNumber"]}):
+            if sts.dbcursor.reactcoll.find_one({"phNumber": data["phNumber"]}):
                 return JsonResponse({"message": "phNumber already existed"})
-            if user_collection.find_one({"email": data["email"]}):
+            if sts.dbcursor.reactcoll.find_one({"email": data["email"]}):
                 return JsonResponse({"message": "email already existed"})
 
             hashed_pass = bcrypt.hashpw(
@@ -33,7 +31,7 @@ class RegisterView(View):
             )
             data["password"] = hashed_pass.decode("utf-8")
             data["role"] = "user"
-            user_collection.insert_one(data)
+            sts.dbcursor.reactcoll.insert_one(data)
             return JsonResponse(
                 {"message": "User registered successfully!"}, status=201
             )
@@ -55,7 +53,7 @@ class LoginView(View):
                     status=400,
                 )
 
-            user = user_collection.find_one({"email": email})
+            user = sts.dbcursor.reactcoll.find_one({"email": email})
             if not user:
                 return JsonResponse(
                     {"message": "User not found", "status": "failed"}, status=404
@@ -70,7 +68,7 @@ class LoginView(View):
 
             if bcrypt.checkpw(password.encode("utf-8"), stored_pass.encode("utf-8")):
                 # Check for existing session
-                existing_session = db.SessionHistory.find_one({"email": email})
+                existing_session = sts.dbcursor.SessionHistory.find_one({"email": email})
                 if existing_session:
                     return JsonResponse(
                         {
@@ -83,7 +81,7 @@ class LoginView(View):
                 request.session["sessionKey"] = session_key
                 request.session["role"] = user.get("role", "user")
                 request.session["login_time"] = datetime.now().isoformat()
-                db.SessionHistory.insert_one(
+                sts.dbcursor.SessionHistory.insert_one(
                     {
                         "email": email,
                         "sessionKey": session_key,
@@ -159,7 +157,7 @@ class GetUsersView(View):
 
             oldData = json.loads(request.body)
             for user in oldData:
-                user_collection.update_one(
+                sts.dbcursor.reactcoll.update_one(
                     {"email": user["email"]},
                     {
                         "$set": {
@@ -178,7 +176,7 @@ class DownloadUsersPDFView(View):
     def get(self, request):
         try:
             users = list(
-                user_collection.find(
+                sts.dbcursor.reactcoll.find(
                     {}, {"_id": 0, "userName": 1, "email": 1, "phNumber": 1}
                 )
             )
@@ -207,7 +205,7 @@ def verifySession(http_req, response):
     response.update({"message": "Invalid Session", "status": "failed", "code": 401})
 
     if session_key:
-        userSessionInfo = db.SessionHistory.find_one(
+        userSessionInfo = sts.dbcursor.SessionHistory.find_one(
             {"sessionKey": session_key}, {"_id": 0}
         )
 
@@ -218,7 +216,7 @@ def verifySession(http_req, response):
                 delta_time = recent_activity - last_activity
                 delta_minutes = delta_time.total_seconds() / 60
                 if delta_minutes <= 30:
-                    db.SessionHistory.update_one(
+                    sts.dbcursor.SessionHistory.update_one(
                         {"sessionKey": session_key},
                         {"$set": {"lastActivityOn": recent_activity}},
                     )
@@ -231,7 +229,7 @@ def verifySession(http_req, response):
                         }
                     )
                 else:
-                    count = db.SessionHistory.delete_one(
+                    count = sts.dbcursor.SessionHistory.delete_one(
                         {"sessionKey": session_key}
                     ).deleted_count
                     response.update(
@@ -260,7 +258,7 @@ class Logout(View):
         try:
             session_key = request.headers.get("X-Session-Key")
             if session_key:
-                db.SessionHistory.delete_one({"sessionKey": session_key})
+                sts.dbcursor.SessionHistory.delete_one({"sessionKey": session_key})
                 request.session.flush()
                 return JsonResponse({"message": "Logged out successfully"}, status=200)
             else:
