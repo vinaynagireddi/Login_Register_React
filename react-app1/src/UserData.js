@@ -30,7 +30,7 @@ function Userdata() {
         alert("Failed to fetch user data.");
       }
     });
-  }, []);
+  }, [sessionKey]);
 
   const handleChange = (index, field, value) => {
     const updated = [...editedUsers];

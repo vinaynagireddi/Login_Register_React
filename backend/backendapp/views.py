@@ -122,7 +122,6 @@ class GetUsersView(View):
         }
         try:
             session_check = verifySession(request, response.copy())
-            print(session_check)
             if session_check["code"] != 200:
                 return JsonResponse(session_check, status=session_check["code"])
             users = list(
@@ -145,7 +144,6 @@ class GetUsersView(View):
 
         try:
             session_check = verifySession(request, response.copy())
-            print("222222222222", session_check)
             if session_check["code"] != 200:
                 return JsonResponse(session_check, status=session_check["code"])
 
