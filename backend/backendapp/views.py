@@ -123,7 +123,7 @@ class GetUsersView(View):
             if session_check["code"] != 200:
                 return JsonResponse(session_check, status=session_check["code"])
             users = list(
-                user_collection.find(
+                sts.dbcursor.reactcoll.find(
                     {}, {"_id": 0, "userName": 1, "email": 1, "phNumber": 1, "role": 1}
                 )
             )
