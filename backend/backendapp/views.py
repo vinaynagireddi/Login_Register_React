@@ -199,7 +199,6 @@ def verifySession(http_req, response):
     session_data = dict(http_req.session.items())
     session_key = session_data.get("sessionKey")
 
-    # 🔄 Try to get sessionKey from header if not in session
     if not session_key:
         session_key = http_req.headers.get("X-Session-Key")
     response.update({"message": "Invalid Session", "status": "failed", "code": 401})
