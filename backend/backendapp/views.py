@@ -12,7 +12,8 @@ import uuid
 from django.shortcuts import redirect
 import backend.settings as sts
 
-
+def now_str():
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 @method_decorator(csrf_exempt, name="dispatch")
 class RegisterView(View):
@@ -67,7 +68,6 @@ class LoginView(View):
                 )
 
             if bcrypt.checkpw(password.encode("utf-8"), stored_pass.encode("utf-8")):
-                # Check for existing session
                 existing_session = sts.dbcursor.SessionHistory.find_one({"email": email})
                 if existing_session:
                     return JsonResponse(
@@ -80,14 +80,13 @@ class LoginView(View):
                 session_key = str(uuid.uuid4())
                 request.session["sessionKey"] = session_key
                 request.session["role"] = user.get("role", "user")
-                request.session["login_time"] = datetime.now().isoformat()
                 sts.dbcursor.SessionHistory.insert_one(
                     {
                         "email": email,
                         "sessionKey": session_key,
                         "role": user.get("role", "user"),
-                        "loginTime": datetime.now(),
-                        "lastActivityOn": datetime.now(),
+                        "loginTime": now_str(),
+                        "lastActivityOn": now_str(),
                     }
                 )
                 return JsonResponse(
@@ -182,7 +181,6 @@ class DownloadUsersPDFView(View):
             )
             html = render_to_string("users_template.html", {"users": users})
             path_wkhtmltopdf = r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
-
             config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
 
             pdf = pdfkit.from_string(html, False, configuration=config)
@@ -194,7 +192,6 @@ class DownloadUsersPDFView(View):
         except Exception as e:
             return JsonResponse({"message": str(e)}, status=500)
 
-
 def verifySession(http_req, response):
     session_data = dict(http_req.session.items())
     session_key = session_data.get("sessionKey")
@@ -204,20 +201,21 @@ def verifySession(http_req, response):
     response.update({"message": "Invalid Session", "status": "failed", "code": 401})
 
     if session_key:
-        userSessionInfo = sts.dbcursor.SessionHistory.find_one(
-            {"sessionKey": session_key}, {"_id": 0}
-        )
+        userSessionInfo = sts.dbcursor.SessionHistory.find_one({"sessionKey": session_key}, {"_id": 0})
 
         if userSessionInfo:
-            recent_activity = datetime.now()
-            last_activity = userSessionInfo.get("lastActivityOn")
-            if last_activity:
-                delta_time = recent_activity - last_activity
-                delta_minutes = delta_time.total_seconds() / 60
+            try:
+                last_activity = userSessionInfo.get("lastActivityOn")
+                if isinstance(last_activity, str):
+                    last_activity = datetime.strptime(last_activity, "%Y-%m-%d %H:%M:%S")
+
+                recent_activity = datetime.now()
+                delta_minutes = (recent_activity - last_activity).total_seconds() / 60
+
                 if delta_minutes <= 30:
                     sts.dbcursor.SessionHistory.update_one(
                         {"sessionKey": session_key},
-                        {"$set": {"lastActivityOn": recent_activity}},
+                        {"$set": {"lastActivityOn": now_str()}},
                     )
                     response.update(
                         {
@@ -228,9 +226,7 @@ def verifySession(http_req, response):
                         }
                     )
                 else:
-                    count = sts.dbcursor.SessionHistory.delete_one(
-                        {"sessionKey": session_key}
-                    ).deleted_count
+                    count = sts.dbcursor.SessionHistory.delete_one({"sessionKey": session_key}).deleted_count
                     response.update(
                         {
                             "message": "Session Expired",
@@ -239,17 +235,18 @@ def verifySession(http_req, response):
                             "sessionKeyDeleteCount": count,
                         }
                     )
-            else:
+            except Exception as e:
                 response.update(
                     {
-                        "message": "Session data incomplete: 'lastActivityOn' missing",
+                        "message": f"Session parse error: {str(e)}",
                         "code": 500,
+                        "status": "failed",
                     }
                 )
         else:
             response.update({"message": "Session Key Not Found", "code": 401})
-    return response
 
+    return response
 
 @method_decorator(csrf_exempt, name="dispatch")
 class Logout(View):
